@@ -1,0 +1,7 @@
+//@version=6
+indicator("Massive Volume Alert", overlay=false)
+ratio = volume / volume[1]
+threshold = input.float(0.05, "Volume Surge Ratio ")
+isMassive = ratio-1 > threshold
+plot(ratio, title="Volume Ratio", color=color.blue)
+alertcondition(isMassive, title="Massive Volume!", message="Massive Vol detected: {{ticker}} {{interval}}")
