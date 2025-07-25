@@ -1,0 +1,25 @@
+//By FelixHsu
+//@version=6
+indicator("BTC Spot-Volume-Sum(Top40 CEX)", overlay=false, max_lines_count=500)
+
+syms = array.from("BINANCE:BTCUSDT","OKX:BTCUSDT","BYBIT:BTCUSDT","BITGET:BTCUSDT","KUCOIN:BTCUSDT","MEXC:BTCUSDT","GATEIO:BTCUSDT","HTX:BTCUSDT","COINEX:BTCUSDT","BINANCEUS:BTCUSDT","COINBASE:BTCUSD","BINANCE:BTCUSD","BITSTAMP:BTCUSD","KRAKEN:BTCUSD","BITFINEX:BTCUSD","GEMINI:BTCUSD","CRYPTOCOM:BTCUSD","OKCOIN:BTCUSD","BINANCE:BTCUSDC","OKX:BTCUSDC","BYBIT:BTCUSDC","COINBASE:BTCUSDC","KUCOIN:BTCUSDC","MEXC:BTCUSDC","BITGET:BTCUSDC","HTX:BTCUSDC","COINEX:BTCUSDC","BITMEX:BTCUSDT","PHEMEX:BTCUSDT","DERIBIT:BTCUSDT","POLONIEX:BTCUSDT","KCEX:BTCUSDT","WEEX:BTCUSDT","WHITEBIT:BTCUSDT","BLOFIN:BTCUSDT","BITSTAMP:BTCUSDT","GEMINI:BTCUSDT","BITSTAMP:BTCUSDC","KRAKEN:BTCUSDC")
+
+var float[] vols = array.new_float()
+array.clear(vols)
+
+for i = 0 to array.size(syms) - 1
+    sym = array.get(syms, i)
+    vol = request.security(sym, timeframe.period, volume)
+    array.push(vols, vol)
+
+float sum_vol = 0.0
+for i = 0 to array.size(vols) - 1
+    sum_vol += array.get(vols, i)
+
+// —— Using TradingView BTCUSD Index 
+idx_close = request.security("INDEX:BTCUSD", timeframe.period, close)
+idx_close_prev = request.security("INDEX:BTCUSD", timeframe.period, close[1])
+
+col = idx_close > idx_close_prev ? color.new(color.green, 0) : idx_close < idx_close_prev ? color.new(color.red, 0) : color.new(color.gray, 0)
+
+plot(sum_vol, color=col, style=plot.style_columns, title="Total Spot Trading Volume")
