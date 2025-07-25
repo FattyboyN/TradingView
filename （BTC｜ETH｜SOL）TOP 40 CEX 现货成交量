@@ -1,0 +1,28 @@
+// 本代码为经过完全测试，我是TV plus方案，没办法验证，需要TV Premium方案才能使用）
+//@version=6
+indicator("全网主流币现货成交量聚合(BTC/ETH/SOL)", overlay=false, max_lines_count=500)
+
+coin = input.string("BTC", "币种", options=["BTC","ETH","SOL"])
+
+// ===== 交易对symbol列表（按币种切换） =====
+syms = coin=="BTC" ? array.from("BINANCE:BTCUSDT","OKX:BTCUSDT","BYBIT:BTCUSDT","BITGET:BTCUSDT","KUCOIN:BTCUSDT","MEXC:BTCUSDT","GATEIO:BTCUSDT","HTX:BTCUSDT","COINEX:BTCUSDT","BINANCEUS:BTCUSDT","COINBASE:BTCUSD","BINANCE:BTCUSD","BITSTAMP:BTCUSD","KRAKEN:BTCUSD","BITFINEX:BTCUSD","GEMINI:BTCUSD","CRYPTOCOM:BTCUSD","OKCOIN:BTCUSD","BINANCE:BTCUSDC","OKX:BTCUSDC","BYBIT:BTCUSDC","COINBASE:BTCUSDC","KUCOIN:BTCUSDC","MEXC:BTCUSDC","BITGET:BTCUSDC","HTX:BTCUSDC","COINEX:BTCUSDC","BITMEX:BTCUSDT","PHEMEX:BTCUSDT","DERIBIT:BTCUSDT","POLONIEX:BTCUSDT","KCEX:BTCUSDT","WEEX:BTCUSDT","WHITEBIT:BTCUSDT","BLOFIN:BTCUSDT","BITSTAMP:BTCUSDT","GEMINI:BTCUSDT","BITSTAMP:BTCUSDC","KRAKEN:BTCUSDC")
+: coin=="ETH" ? array.from("BINANCE:ETHUSDT","OKX:ETHUSDT","BYBIT:ETHUSDT","BITGET:ETHUSDT","KUCOIN:ETHUSDT","MEXC:ETHUSDT","GATEIO:ETHUSDT","HTX:ETHUSDT","COINEX:ETHUSDT","BINANCEUS:ETHUSDT","COINBASE:ETHUSD","BINANCE:ETHUSD","BITSTAMP:ETHUSD","KRAKEN:ETHUSD","BITFINEX:ETHUSD","GEMINI:ETHUSD","CRYPTOCOM:ETHUSD","OKCOIN:ETHUSD","BINANCE:ETHUSDC","OKX:ETHUSDC","BYBIT:ETHUSDC","COINBASE:ETHUSDC","KUCOIN:ETHUSDC","MEXC:ETHUSDC","BITGET:ETHUSDC","HTX:ETHUSDC","COINEX:ETHUSDC")
+: array.from("BINANCE:SOLUSDT","OKX:SOLUSDT","BYBIT:SOLUSDT","BITGET:SOLUSDT","KUCOIN:SOLUSDT","MEXC:SOLUSDT","GATEIO:SOLUSDT","HTX:SOLUSDT","COINEX:SOLUSDT","BINANCEUS:SOLUSDT") // SOL主流交易对
+
+// ===== 计算聚合成交量 =====
+var float[] vols = array.new_float()
+array.clear(vols)
+for i = 0 to array.size(syms) - 1
+    vol = request.security(array.get(syms, i), timeframe.period, volume)
+    array.push(vols, vol)
+float sum_vol = 0.0
+for i = 0 to array.size(vols) - 1
+    sum_vol += array.get(vols, i)
+
+// ===== 价格判色基准（BTC:INDEX/ETH:INDEX/SOL:BINANCE）=====
+refprice = coin=="BTC" ? request.security("INDEX:BTCUSD", timeframe.period, close) : coin=="ETH" ? request.security("INDEX:ETHUSD", timeframe.period, close) : request.security("BINANCE:SOLUSDT", timeframe.period, close)
+refprice_prev = coin=="BTC" ? request.security("INDEX:BTCUSD", timeframe.period, close[1]) : coin=="ETH" ? request.security("INDEX:ETHUSD", timeframe.period, close[1]) : request.security("BINANCE:SOLUSDT", timeframe.period, close[1])
+
+col = refprice > refprice_prev ? color.new(color.green, 0) : refprice < refprice_prev ? color.new(color.red, 0) : color.new(color.gray, 0)
+
+plot(sum_vol, color=col, style=plot.style_columns, title="全网现货成交量(" + coin + ")")
