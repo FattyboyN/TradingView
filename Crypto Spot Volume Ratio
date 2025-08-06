@@ -13,6 +13,7 @@ show_kraken    = input.bool(true,  "Show Kraken")
 show_htx       = input.bool(true,  "Show HTX")
 show_bitstamp  = input.bool(true,  "Show Bitstamp")
 show_gate      = input.bool(true,  "Show Gate")
+show_cryptocom = input.bool(true,  "Show Crypto.com")
 
 // === 自动获取当前图表的交易对 & USD 版本 ===
 pair     = syminfo.ticker                             // e.g. "BTCUSDT","ETHUSDT"...
@@ -29,15 +30,15 @@ v_kraken    = request.security("KRAKEN:"   + pair_usd,  timeframe.period, volume
 v_htx       = request.security("HTX:"      + pair,      timeframe.period, volume)
 v_bitstamp  = request.security("BITSTAMP:" + pair_usd,  timeframe.period, volume)
 v_gate      = request.security("GATEIO:"   + pair,      timeframe.period, volume)
-
+v_cryptocom = request.security("CRYPTOCOM:" + pair,     timeframe.period, volume)
 // === 安全除法 ===
 safe_div(val, div) => div != 0 ? val / div : na
 
 // === 1. 求和（固定 10 家） ===
-sumVol = v_binance + v_okx + v_bybit + v_kucoin + v_coinbase + v_bfx + v_kraken + v_htx + v_bitstamp + v_gate
+sumVol = v_binance + v_okx + v_bybit + v_kucoin + v_coinbase + v_bfx + v_kraken + v_htx + v_bitstamp + v_gate + v_cryptocom
 
 // === 2. 平均值（除以 10） ===
-avgVol = sumVol / 10.0
+avgVol = sumVol / 11.0
 
 // === 3. 各家系数 ===
 coef_binance   = safe_div(v_binance,  avgVol)
@@ -50,7 +51,7 @@ coef_kraken    = safe_div(v_kraken,   avgVol)
 coef_htx       = safe_div(v_htx,      avgVol)
 coef_bitstamp  = safe_div(v_bitstamp, avgVol)
 coef_gate      = safe_div(v_gate,     avgVol)
-
+coef_cryptocom = safe_div(v_cryptocom, avgVol)
 // === 配色 ===
 col_binance   = color.yellow
 col_okx       = color.black
@@ -62,9 +63,9 @@ col_kraken    = color.purple
 col_htx       = color.teal
 col_bitstamp  = color.gray
 col_gate      = color.fuchsia
-
-// === 横向表格：11 列 × 1 行（第0列标题 + 10 家） ===
-var tbl = table.new(position.top_right, 11, 1, bgcolor=color.new(color.white, 80))
+col_cryptocom = color.lime
+// === 横向表格：12 列 × 1 行（第0列标题 + 11 家） ===
+var tbl = table.new(position.top_right, 12, 1, bgcolor=color.new(color.white, 80))
 if barstate.islast
     table.cell(tbl, 0, 0, pair + " Coef",                     text_color=color.white, text_size=size.normal)
     table.cell(tbl, 1, 0, show_binance  ? "BN: "   + str.tostring(coef_binance,   "#.##") : "", text_color=col_binance,   text_size=size.tiny)
@@ -77,7 +78,7 @@ if barstate.islast
     table.cell(tbl, 8, 0, show_htx       ? "HTX: "  + str.tostring(coef_htx,       "#.##") : "", text_color=col_htx,       text_size=size.tiny)
     table.cell(tbl, 9, 0, show_bitstamp  ? "BSTP: "+ str.tostring(coef_bitstamp,  "#.##") : "", text_color=col_bitstamp,  text_size=size.tiny)
     table.cell(tbl,10, 0, show_gate      ? "Gate: " + str.tostring(coef_gate,      "#.##") : "", text_color=col_gate,      text_size=size.tiny)
-
+    table.cell(tbl,11, 0, show_cryptocom ? "Crypto.com: " + str.tostring(coef_cryptocom,      "#.##") : "", text_color=col_cryptocom, text_size=size.tiny)
 // === 4. 绘制系数曲线 ===
 plot(show_binance   ? coef_binance  : na, title="Binance",    color=col_binance,  linewidth=2)
 plot(show_okx       ? coef_okx      : na, title="OKX",        color=col_okx,      linewidth=2)
@@ -89,6 +90,7 @@ plot(show_kraken    ? coef_kraken   : na, title="Kraken",     color=col_kraken, 
 plot(show_htx       ? coef_htx      : na, title="HTX",        color=col_htx,      linewidth=2)
 plot(show_bitstamp  ? coef_bitstamp : na, title="Bitstamp",   color=col_bitstamp, linewidth=2)
 plot(show_gate      ? coef_gate     : na, title="Gate",       color=col_gate,     linewidth=2)
+plot(show_cryptocom      ? coef_cryptocom     : na, title="Crypto.com",       color=col_cryptocom,     linewidth=2)
 
 // === 平均基准线：1 ===
 hline(1, "平均基准线", color.new(color.white, 50), hline.style_dashed)
