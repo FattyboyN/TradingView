@@ -2,24 +2,123 @@
 //@version=6
 indicator("BTC Spot-Volume-Sum(Top40 CEX)", overlay=false, max_lines_count=500)
 
-syms = array.from("BINANCE:BTCUSDT","OKX:BTCUSDT","BYBIT:BTCUSDT","BITGET:BTCUSDT","KUCOIN:BTCUSDT","MEXC:BTCUSDT","GATEIO:BTCUSDT","HTX:BTCUSDT","COINEX:BTCUSDT","BINANCEUS:BTCUSDT","COINBASE:BTCUSD","BINANCE:BTCUSD","BITSTAMP:BTCUSD","KRAKEN:BTCUSD","BITFINEX:BTCUSD","GEMINI:BTCUSD","CRYPTOCOM:BTCUSD","OKCOIN:BTCUSD","BINANCE:BTCUSDC","OKX:BTCUSDC","BYBIT:BTCUSDC","COINBASE:BTCUSDC","KUCOIN:BTCUSDC","MEXC:BTCUSDC","BITGET:BTCUSDC","HTX:BTCUSDC","COINEX:BTCUSDC","BITMEX:BTCUSDT","PHEMEX:BTCUSDT","DERIBIT:BTCUSDT","POLONIEX:BTCUSDT","KCEX:BTCUSDT","WEEX:BTCUSDT","WHITEBIT:BTCUSDT","BLOFIN:BTCUSDT","BITSTAMP:BTCUSDT","GEMINI:BTCUSDT","BITSTAMP:BTCUSDC","KRAKEN:BTCUSDC")
+// —— 交易对列表（单行）
+syms = array.from("BINANCE:BTCUSDT","OKX:BTCUSDT","BYBIT:BTCUSDT","BITGET:BTCUSDT","KUCOIN:BTCUSDT","MEXC:BTCUSDT","GATEIO:BTCUSDT","HTX:BTCUSDT","COINEX:BTCUSDT","BINANCEUS:BTCUSDT","COINBASE:BTCUSD","BINANCE:BTCUSD","BITSTAMP:BTCUSD","KRAKEN:BTCUSD","BITFINEX:BTCUSD","GEMINI:BTCUSD","CRYPTOCOM:BTCUSDT","BINANCE:BTCUSDC","OKX:BTCUSDC","BYBIT:BTCUSDC","COINBASE:BTCUSDC","KUCOIN:BTCUSDC","MEXC:BTCUSDC","BITGET:BTCUSDC","HTX:BTCUSDC","COINEX:BTCUSDC","BTSE:BTCUSD","PHEMEX:BTCUSDT","BINANCE:BTCFDUSD","Deribit:BTCUSDT","POLONIEX:BTCUSDT","KCEX:BTCUSDT","WEEX:BTCUSDT","WHITEBIT:BTCUSDT","CRYPTOCOM:BTCUSD","BITSTAMP:BTCUSDT","GEMINI:BTCUSDT","BITSTAMP:BTCUSDC","KRAKEN:BTCUSDC")
 
-var float[] vols = array.new_float()
-array.clear(vols)
+// —— barsAgo 设置（只作用在“显示哪一根 bar 的 Top5”，不影响计算）
+useBarsAgo = input.bool(false, "Use barsAgo for Top5")
+barsAgo    = input.int(0, "Bars ago (0 = current bar)", minval=0, maxval=500)
+
+// —— Top5 变量：每根 bar 计算当前 bar 的 Top5
+var string top1_sym = ""
+var string top2_sym = ""
+var string top3_sym = ""
+var string top4_sym = ""
+var string top5_sym = ""
+var float  top1_vol = 0.0
+var float  top2_vol = 0.0
+var float  top3_vol = 0.0
+var float  top4_vol = 0.0
+var float  top5_vol = 0.0
+
+top1_sym := ""
+top2_sym := ""
+top3_sym := ""
+top4_sym := ""
+top5_sym := ""
+top1_vol := 0.0
+top2_vol := 0.0
+top3_vol := 0.0
+top4_vol := 0.0
+top5_vol := 0.0
+
+// —— 一次循环：算当前 bar 总量 + 当前 bar 的 Top5
+float sum_vol = 0.0
 
 for i = 0 to array.size(syms) - 1
     sym = array.get(syms, i)
-    vol = request.security(sym, timeframe.period, volume)
-    array.push(vols, vol)
+    volSeries = request.security(sym, timeframe.period, volume)
+    currVol = nz(volSeries)
+    sum_vol += currVol
+    v = currVol
+    if na(v)
+        continue
+    if v >= top1_vol
+        top5_vol := top4_vol
+        top5_sym := top4_sym
+        top4_vol := top3_vol
+        top4_sym := top3_sym
+        top3_vol := top2_vol
+        top3_sym := top2_sym
+        top2_vol := top1_vol
+        top2_sym := top1_sym
+        top1_vol := v
+        top1_sym := sym
+    else if v >= top2_vol
+        top5_vol := top4_vol
+        top5_sym := top4_sym
+        top4_vol := top3_vol
+        top4_sym := top3_sym
+        top3_vol := top2_vol
+        top3_sym := top2_sym
+        top2_vol := v
+        top2_sym := sym
+    else if v >= top3_vol
+        top5_vol := top4_vol
+        top5_sym := top4_sym
+        top4_vol := top3_vol
+        top4_sym := top3_sym
+        top3_vol := v
+        top3_sym := sym
+    else if v >= top4_vol
+        top5_vol := top4_vol
+        top5_sym := top4_sym
+        top4_vol := v
+        top4_sym := sym
+    else if v >= top5_vol
+        top5_vol := v
+        top5_sym := sym
 
-float sum_vol = 0.0
-for i = 0 to array.size(vols) - 1
-    sum_vol += array.get(vols, i)
-
-// —— Using TradingView BTCUSD Index 
-idx_close = request.security("INDEX:BTCUSD", timeframe.period, close)
+// —— BTC 指数决定柱子颜色（你的原始逻辑）
+idx_close      = request.security("INDEX:BTCUSD", timeframe.period, close)
 idx_close_prev = request.security("INDEX:BTCUSD", timeframe.period, close[1])
-
 col = idx_close > idx_close_prev ? color.new(color.green, 0) : idx_close < idx_close_prev ? color.new(color.red, 0) : color.new(color.gray, 0)
 
+// —— 绘制总量柱子
 plot(sum_vol, color=col, style=plot.style_columns, title="Total Spot Trading Volume")
+
+// —— 决定“要显示哪一根 bar 的 Top5”：当前（0）或 barsAgo
+show_top1_sym = useBarsAgo ? top1_sym[barsAgo] : top1_sym
+show_top2_sym = useBarsAgo ? top2_sym[barsAgo] : top2_sym
+show_top3_sym = useBarsAgo ? top3_sym[barsAgo] : top3_sym
+show_top4_sym = useBarsAgo ? top4_sym[barsAgo] : top4_sym
+show_top5_sym = useBarsAgo ? top5_sym[barsAgo] : top5_sym
+show_top1_vol = useBarsAgo ? nz(top1_vol[barsAgo]) : top1_vol
+show_top2_vol = useBarsAgo ? nz(top2_vol[barsAgo]) : top2_vol
+show_top3_vol = useBarsAgo ? nz(top3_vol[barsAgo]) : top3_vol
+show_top4_vol = useBarsAgo ? nz(top4_vol[barsAgo]) : top4_vol
+show_top5_vol = useBarsAgo ? nz(top5_vol[barsAgo]) : top5_vol
+titleOffset   = useBarsAgo ? barsAgo : 0
+
+// —— Top5 右上角表格
+var table top5_table = table.new(position.top_right, 2, 6, frame_width=1, border_width=1)
+
+if barstate.isrealtime or barstate.isnew
+    titleText = "Symbol (Vol)  [barsAgo=" + str.tostring(titleOffset) + "]"
+    table.cell(top5_table, 0, 0, "Rank",    text_color=color.black, bgcolor=color.new(color.gray, 70), text_size=size.tiny)
+    table.cell(top5_table, 1, 0, titleText, text_color=color.black, bgcolor=color.new(color.gray, 70), text_size=size.tiny)
+
+    table.cell(top5_table, 0, 1, "1", text_color=color.blue,   text_size=size.tiny)
+    table.cell(top5_table, 1, 1, str.format("{0}\n{1,number,0}", show_top1_sym, show_top1_vol), text_color=color.black, text_size=size.tiny)
+
+    table.cell(top5_table, 0, 2, "2", text_color=color.red,    text_size=size.tiny)
+    table.cell(top5_table, 1, 2, str.format("{0}\n{1,number,0}", show_top2_sym, show_top2_vol), text_color=color.black, text_size=size.tiny)
+
+    table.cell(top5_table, 0, 3, "3", text_color=color.lime,   text_size=size.tiny)
+    table.cell(top5_table, 1, 3, str.format("{0}\n{1,number,0}", show_top3_sym, show_top3_vol), text_color=color.black, text_size=size.tiny)
+
+    table.cell(top5_table, 0, 4, "4", text_color=color.orange, text_size=size.tiny)
+    table.cell(top5_table, 1, 4, str.format("{0}\n{1,number,0}", show_top4_sym, show_top4_vol), text_color=color.black, text_size=size.tiny)
+
+    table.cell(top5_table, 0, 5, "5", text_color=color.purple, text_size=size.tiny)
+    table.cell(top5_table, 1, 5, str.format("{0}\n{1,number,0}", show_top5_sym, show_top5_vol), text_color=color.black, text_size=size.tiny)
